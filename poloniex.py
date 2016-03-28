@@ -47,6 +47,16 @@ class Poloniex:
 
 		return tradeHistory
 
+	#valid period times: 300(5m), 900(15m), 1800(30m), 7200(2h), 14400(4h), 86400(1d)
+	def getChartData(self,currencyPairs,start,end,period):
+		chartData = {}
+		for pair in currencyPairs:
+			r = requests.get("https://poloniex.com/public?command=returnChartData&currencyPair=" 
+				+ pair + "&start=" + str(toUnixTime(start)) + "&end=" + str(toUnixTime(end))
+				+ "&period=" + str(period))
+			chartData[pair] = json.loads(r.text)
+		return chartData
+
 	def getLoanOrders(self,currencies):
 		loanOrders = {}
 		for currency in currencies:
@@ -62,9 +72,10 @@ class Poloniex:
 
 
 
-bot = Poloniex()
+#bot = Poloniex()
 #print(bot.getTicker(["BTC_XMR","BTC_ETH"]))
 #print(bot.getOrderBook(["BTC_XMR","BTC_ETH","BTC_LTC"],5))
 #bot.getTradeHistory(["BTC_XMR"],(7,14,2013),(7,14,2014))
-print(bot.getLoanOrders(["XMR"]))
+#print(bot.getLoanOrders(["XMR"]))
+#print(bot.getChartData(["BTC_XMR"],(7,14,2014),(7,15,2014),300))
 
