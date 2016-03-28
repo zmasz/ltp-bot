@@ -1,0 +1,4 @@
+name: LTP-env
+dependencies:
+- python=3
+- requests
