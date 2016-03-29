@@ -1,4 +1,5 @@
 import collections
+import math
 
 def mean(data):
 	sum = 0
@@ -42,8 +43,18 @@ def variance(data):
 
 	return numerator/n
 
+def standard_deviation(data):
+	return math.sqrt(variance(data))
+
+def interquartile_range(x):
+	return quantile(x,0.75) - quantile(x,0.25)
+
+#def covariance()
+#def correlation()
+#def grubbsTest()
 
 
 
 
-print(variance([1,1,2,3,4,5,6]))
+
+
