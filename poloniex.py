@@ -1,5 +1,6 @@
 import requests, json
 import datetime
+import pandas as pd
 
 #argument type must be tuple; (m,d,y)
 def toUnixTime(date):
@@ -16,66 +17,65 @@ def toUnixTime(date):
 class Poloniex:
 
 
-	def getTicker(self,currencyPairs):
+	def getTicker(self,currencyPair):
 		r = requests.get("https://poloniex.com/public?command=returnTicker")
-		ticker = json.loads(r.text)
+		ticker = json.loads(r.text)[currencyPair]
+		
+		return pd.DataFrame.from_dict(ticker,orient='index')
 
-		return {pair: ticker[pair] for pair in ticker if pair in currencyPairs}
-
-	def get24hVolume(self,currencyPairs):
+	def get24hVolume(self,currencyPair):
 		r = requests.get("https://poloniex.com/public?command=return24hVolume")
-		volumes = json.loads(r.text)
+		volumes = json.loads(r.text)[currencyPair]
+		
+		return pd.DataFrame.from_dict(volumes,orient='index')
 
-		return {pair: volumes[pair] for pair in volumes if pair in currencyPairs}
+	def getOrderBook(self,currencyPair,depth):
 
-	def getOrderBook(self,currencyPairs,depth):
-		orderBook = {}
-		for pair in currencyPairs:
-			r = requests.get("https://poloniex.com/public?command=returnOrderBook&currencyPair="
-				+ pair + "&depth=" + str(depth))
-			orderBook[pair] = json.loads(r.text)
 
-		return orderBook
+		r = requests.get("https://poloniex.com/public?command=returnOrderBook&currencyPair="
+			+ currencyPair + "&depth=" + str(depth))
+		orderBook = json.loads(r.text)
+
+		return pd.DataFrame.from_dict(orderBook,orient='columns')
 
 	#Start and End dates are tuples;(m,d,y)
-	def getTradeHistory(self,currencyPairs,start,end):
+	def getTradeHistory(self,currencyPair,start,end):
 		tradeHistory = {}
-		for pair in currencyPairs:
-			r = requests.get("https://poloniex.com/public?command=returnTradeHistory&currencyPair="
-				+ pair + "&start=" + str(toUnixTime(start)) + "&end=" + str(toUnixTime(end)))
-			tradeHistory[pair] = json.loads(r.text)
+		r = requests.get("https://poloniex.com/public?command=returnTradeHistory&currencyPair="
+			+ currencyPair + "&start=" + str(toUnixTime(start)) + "&end=" + str(toUnixTime(end)))
+		tradeHistory = json.loads(r.text)
 
-		return tradeHistory
+		return pd.DataFrame.from_dict(tradeHistory,orient='columns')
 
 	#valid period times: 300(5m), 900(15m), 1800(30m), 7200(2h), 14400(4h), 86400(1d)
-	def getChartData(self,currencyPairs,start,end,period):
+	def getChartData(self,currencyPair,start,end,period):
 		chartData = {}
-		for pair in currencyPairs:
-			r = requests.get("https://poloniex.com/public?command=returnChartData&currencyPair=" 
-				+ pair + "&start=" + str(toUnixTime(start)) + "&end=" + str(toUnixTime(end))
-				+ "&period=" + str(period))
-			chartData[pair] = json.loads(r.text)
-		return chartData
+		r = requests.get("https://poloniex.com/public?command=returnChartData&currencyPair=" 
+			+ currencyPair + "&start=" + str(toUnixTime(start)) + "&end=" + str(toUnixTime(end))
+			+ "&period=" + str(period))
+		chartData = json.loads(r.text)
 
-	def getLoanOrders(self,currencies):
+		return pd.DataFrame.from_dict(chartData,orient='columns')
+
+	def getLoanOrders(self,currency):
 		loanOrders = {}
-		for currency in currencies:
-			r = requests.get("https://poloniex.com/public?command=returnLoanOrders&currency=" +
-				currency)
-			loanOrders[currency] = json.loads(r.text)
+		r = requests.get("https://poloniex.com/public?command=returnLoanOrders&currency=" +
+			currency)
+		loanOrders = json.loads(r.text)['offers']
 
-		return loanOrders
-
+		return pd.DataFrame.from_dict(loanOrders,orient='columns')
 
 
 
 
 
 
-#bot = Poloniex()
-#print(bot.getTicker(["BTC_XMR","BTC_ETH"]))
-#print(bot.getOrderBook(["BTC_XMR","BTC_ETH","BTC_LTC"],5))
-#bot.getTradeHistory(["BTC_XMR"],(7,14,2013),(7,14,2014))
-#print(bot.getLoanOrders(["XMR"]))
-#print(bot.getChartData(["BTC_XMR"],(7,14,2014),(7,15,2014),300))
+
+tester = Poloniex()
+#print(tester.getTicker("BTC_XMR"))
+#print(tester.get24hVolume("BTC_XMR"))
+#print(tester.getOrderBook("BTC_XMR",5))
+#print(tester.getTradeHistory("BTC_XMR",(7,14,2013),(7,14,2014)))
+#print(tester.getLoanOrders("XMR"))
+#print(tester.getChartData("BTC_XMR",(7,14,2014),(7,15,2014),300))
 
