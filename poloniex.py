@@ -1,17 +1,17 @@
 import requests, json
-import datetime
+import datetime as dt
+import numpy as np
 import pandas as pd
 
-#argument type must be tuple; (m,d,y)
-def toUnixTime(date):
-	epoch = datetime.date(1970,1,1)
-	date = datetime.date(date[2],date[0],date[1])
 
-	return int((date-epoch).total_seconds())
+
+toDateTime = np.vectorize(dt.datetime.fromtimestamp)
+toUnixTime = np.vectorize(dt.datetime.timestamp)
+
+
 
 
 #Public API methods for Poloniex data
-	#All methods use the list type arguments for currencies(pairs)
 #TODO: implement Trading API methods
 
 class Poloniex:
@@ -38,24 +38,29 @@ class Poloniex:
 
 		return pd.DataFrame.from_dict(orderBook,orient='columns')
 
-	#Start and End dates are tuples;(m,d,y)
+	#Start and End dates are tuples;(y,m,d)
 	def getTradeHistory(self,currencyPair,start,end):
+		start = int(toUnixTime(dt.datetime(start[0],start[1],start[2])))
+		end = int(toUnixTime(dt.datetime(end[0],end[1],end[2])))
 		tradeHistory = {}
 		r = requests.get("https://poloniex.com/public?command=returnTradeHistory&currencyPair="
-			+ currencyPair + "&start=" + str(toUnixTime(start)) + "&end=" + str(toUnixTime(end)))
+			+ currencyPair + "&start=" + str(start) + "&end=" + str(end))
 		tradeHistory = json.loads(r.text)
 
 		return pd.DataFrame.from_dict(tradeHistory,orient='columns')
 
 	#valid period times: 300(5m), 900(15m), 1800(30m), 7200(2h), 14400(4h), 86400(1d)
 	def getChartData(self,currencyPair,start,end,period):
+		start = int(toUnixTime(dt.datetime(start[0],start[1],start[2])))
+		end = int(toUnixTime(dt.datetime(end[0],end[1],end[2])))
 		chartData = {}
 		r = requests.get("https://poloniex.com/public?command=returnChartData&currencyPair=" 
-			+ currencyPair + "&start=" + str(toUnixTime(start)) + "&end=" + str(toUnixTime(end))
+			+ currencyPair + "&start=" + str(start) + "&end=" + str(end)
 			+ "&period=" + str(period))
-		chartData = json.loads(r.text)
+		chartData = pd.DataFrame.from_dict(json.loads(r.text),orient='columns')
+		chartData['date'] = chartData['date'].apply(toDateTime)
 
-		return pd.DataFrame.from_dict(chartData,orient='columns')
+		return chartData
 
 	def getLoanOrders(self,currency):
 		loanOrders = {}
@@ -75,7 +80,7 @@ tester = Poloniex()
 #print(tester.getTicker("BTC_XMR"))
 #print(tester.get24hVolume("BTC_XMR"))
 #print(tester.getOrderBook("BTC_XMR",5))
-#print(tester.getTradeHistory("BTC_XMR",(7,14,2013),(7,14,2014)))
+#print(tester.getTradeHistory("BTC_XMR",(2014,7,14),(2014,8,14)))
 #print(tester.getLoanOrders("XMR"))
-#print(tester.getChartData("BTC_XMR",(7,14,2014),(7,15,2014),300))
+print(tester.getChartData("BTC_XMR",(2014,7,14),(2014,7,15),300))
 
