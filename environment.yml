@@ -2,3 +2,6 @@ name: LTP-env
 dependencies:
 - python=3
 - requests
+- matplotlib
+- numpy
+- pandas
