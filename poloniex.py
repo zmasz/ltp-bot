@@ -39,8 +39,8 @@ class Poloniex:
 
 	#Start and End dates are datetime objects
 	def getTradeHistory(self,currencyPair,start,end):
-		start = int(toUnixTime(start)))
-		end = int(toUnixTime(end)))
+		start = int(toUnixTime(start))
+		end = int(toUnixTime(end))
 		tradeHistory = {}
 		r = requests.get("https://poloniex.com/public?command=returnTradeHistory&currencyPair="
 			+ currencyPair + "&start=" + str(start) + "&end=" + str(end))
@@ -57,7 +57,7 @@ class Poloniex:
 			+ currencyPair + "&start=" + str(start) + "&end=" + str(end)
 			+ "&period=" + str(period))
 		chartData = pd.DataFrame.from_dict(json.loads(r.text),orient='columns')
-		chartData['date'] = chartData['date'].apply(toDateTime)
+		#chartData['date'] = chartData['date'].apply(toDateTime)
 
 		return chartData
 
