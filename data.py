@@ -2,6 +2,7 @@ from poloniex import Poloniex
 import pandas as pd
 import datetime as dt
 import numpy as np
+from os import listdir
 
 toDateTime = np.vectorize(dt.datetime.fromtimestamp)
 
@@ -23,6 +24,9 @@ class Data(Poloniex):
 
 	#Valid Arguments ('XXX/OOO',int,['m','h','d','w','M','y'])
 	def readChartData(self,pair,interval,unit):
+
+		if "chartData"+pair+".csv" not in listdir():
+			Data.saveChartData(self,pair)
 
 		chartDataOrig = pd.read_csv('chartData'+pair+".csv")
 
@@ -51,4 +55,5 @@ class Data(Poloniex):
 		return pd.DataFrame.from_dict(chartDataNew,orient='columns')
 
 
-
+tester = Data()
+tester.readChartData("BTC_LTC",1,'d')
