@@ -1,12 +1,13 @@
 from poloniex import Poloniex
+from chartGen import Charter
+
 import pandas as pd
 import datetime as dt
 import numpy as np
-from os import listdir
+import os
+import time
+from threading import Thread
 
-toDateTime = np.vectorize(dt.datetime.fromtimestamp)
-
-unitSeconds = {'m':60, 'h':3600, 'd':86400, 'w':604800, 'M':2678400, 'y':32140800}
 
 def getSeconds(timeUnit):
 	seconds = unitSeconds[timeUnit]
@@ -15,45 +16,111 @@ def getSeconds(timeUnit):
 
 
 class Data(Poloniex):
+
+	def __init__(self,exchange='poloniex',updateFlag = True):
+
+		self.chartData = None
+
+		self.updateFlag = updateFlag
+		self.exchange = exchange
+
+		self.fileIO()
+
+		
+
+		if self.updateFlag == True:
+			t = Thread(target=self.updateData)
+			#t.start()
+
+
+	def fileIO(self):
+
+		if 'data' not in os.listdir():
+			os.mkdir('data')
+			print("Created new data folder")
+		os.chdir('data')
+
+		if self.exchange not in os.listdir():
+			os.mkdir(self.exchange)
+			print("Created new ", self.exchange, " folder")
+		os.chdir(self.exchange)
+
+		if self.pair not in os.listdir():
+			os.mkdir(self.pair)
+			print("Created new ", self.pair, " folder")
+		os.chdir(self.pair)
+
+
+		if "chartData" + self.pair + ".h5" not in os.listdir():
+			self.saveChartData()
+
+		self.chartData = pd.read_hdf("chartData" + self.pair + ".h5",'table')
+
+		os.chdir('../../..')
+
 	
-	
-	def saveChartData(self,pair):
-		start = dt.datetime(2008,1,1)
-		end = dt.datetime.utcnow()
-		Poloniex.getChartData(self,pair,start,end,300).to_csv('chartData'+pair+".csv")
-
-	#Valid Arguments ('XXX/OOO',int,['m','h','d','w','M','y'])
-	def readChartData(self,pair,interval,unit):
-
-		if "chartData"+pair+".csv" not in listdir():
-			Data.saveChartData(self,pair)
-
-		chartDataOrig = pd.read_csv('chartData'+pair+".csv")
-
-		chartDataNew = {'date':[], 'open':[], 'close':[], 'high':[], 'low':[]}
-
-		datelist = []
-		openp = []
-		closep = []
-		highp = []
-		lowp = []
+	def saveChartData(self,start=dt.datetime(2008,1,1)):
+		now = dt.datetime.utcnow()
+		df = Poloniex.getChartData(self,self.pair,start,now,300)
+		df.to_hdf("chartData" + self.pair + ".h5",'table')
+		print("chartData" + self.pair + ".h5 saved at " + os.getcwd())
 
 
-		first = [0,chartDataOrig['date'][0]]
-		for i,date in enumerate(chartDataOrig['date']):
+	def saveOrderBook(self):
+		pass
 
-			if date >= first[1] + (interval*getSeconds(unit)):
+	def saveTradeHistory(self):
+		pass
 
-				chartDataNew['date'].append(toDateTime(first[1]))
-				chartDataNew['open'].append(chartDataOrig['open'][first[0]])
-				chartDataNew['close'].append(chartDataOrig['close'][i])
-				chartDataNew['high'].append(chartDataOrig['high'][first[0]:i].max())
-				chartDataNew['low'].append(chartDataOrig['low'][first[0]:i].min())
+	def resampleClose(self, frequency):
+		closep = self.chartData['close']
+		closep = closep.resample(frequency).last()
+		closep.name = 'close'
+		return closep
 
-				first = [i,chartDataOrig['date'][i]]
+	def resampleOpen(self, frequency):
+		openp = self.chartData['open']
+		openp = openp.resample(frequency).first()
+		openp.name = 'open'
+		return openp
 
-		return pd.DataFrame.from_dict(chartDataNew,orient='columns')
+	def resampleHigh(self, frequency):
+		highp = self.chartData['high']
+		highp = highp.resample(frequency).max()
+		highp.name = 'high'
+		return highp
+
+	def resampleLow(self,frequency):
+		lowp = self.chartData['low']
+		lowp = lowp.resample(frequency).min()
+		lowp.name = 'low'
+		return lowp
+
+	def resampleVolume(self,frequency):
+		volume = self.chartData['volume']
+		volume = volume.resample(frequency).sum()
+		volume.name = 'volume'
+		return volume
 
 
-tester = Data()
-tester.readChartData("BTC_LTC",1,'d')
+	def resampleChartData(self,frequency):
+		chartData = pd.DataFrame(self.resampleOpen(frequency))
+		chartData['high'] = self.resampleHigh(frequency)
+		chartData['low'] = self.resampleLow(frequency)
+		chartData['close'] = self.resampleClose(frequency)
+		chartData['volume'] = self.resampleVolume(frequency)
+		
+		
+		return chartData
+
+		
+
+	def updateData(self):
+
+		size = len(self.chartData.index)
+		lastDate = self.chartData.index[size-1]
+
+		while self.updateFlag == True:
+			time.sleep(3)
+			self.chartData = pd.concat([self.chartData,Poloniex.getChartData(self,self.pair,lastDate,dt.datetime.utcnow(),300)])
+
